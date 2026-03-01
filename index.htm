@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOSHIRO VCF Registration</title>
+<style>
+body{
+    margin:0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: linear-gradient(135deg,#020617,#0f172a);
+    color:white;
+}
+
+.center{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.card{
+    width:90%;
+    max-width:420px;
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(12px);
+    padding:25px;
+    border-radius:16px;
+    box-shadow:0 0 25px rgba(0,0,0,0.6);
+}
+
+h2{text-align:center;margin-bottom:10px;}
+
+input{
+    width:100%;
+    padding:12px;
+    margin:7px 0;
+    border:none;
+    border-radius:8px;
+    font-size:15px;
+}
+
+button{
+    width:100%;
+    padding:13px;
+    margin-top:10px;
+    border:none;
+    border-radius:8px;
+    background:#38bdf8;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+button:hover{background:#0ea5e9;}
+
+.small-btn{
+    background:#22c55e;
+    margin-top:8px;
+}
+
+.hidden{display:none;}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+td,th{
+    border:1px solid rgba(255,255,255,0.2);
+    padding:6px;
+    font-size:12px;
+}
+
+/* progress */
+.progress-wrap{
+    margin:12px 0 6px 0;
+}
+
+.progress-bar-bg{
+    width:100%;
+    height:8px;
+    background:rgba(255,255,255,0.2);
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.progress-bar-fill{
+    height:100%;
+    width:0%;
+    background:#22c55e;
+}
+.share-buttons{
+    display:flex;
+    justify-content:space-around;
+    margin:10px 0;
+}
+.share-buttons a{
+    flex:1;
+    margin:0 3px;
+    padding:8px 0;
+    text-align:center;
+    border-radius:8px;
+    color:black;
+    font-weight:bold;
+    text-decoration:none;
+    background:#facc15;
+    font-size:12px;
+}
+.share-buttons a:hover{
+    background:#eab308;
+}
+</style>
+</head>
+<body>
+
+<!-- USER PAGE -->
+<div class="center" id="userPage">
+<div class="card">
+
+<h2>📇 Register Contact</h2>
+
+<!-- COUNTER -->
+<div class="progress-wrap">
+  <div style="font-size:14px;margin-bottom:4px;">
+    👥 Registered Users: <span id="userCount">0</span>
+  </div>
+  <div class="progress-bar-bg">
+    <div id="progressBar" class="progress-bar-fill"></div>
+  </div>
+</div>
+
+<form id="form">
+<input type="text" id="name" placeholder="Full Name" required>
+<input type="tel" id="phone" placeholder="Phone Number (e.g., +2348012345678)" required>
+<input type="email" id="email" placeholder="Email Address" required>
+<button type="submit">Submit</button>
+</form>
+
+<button onclick="showAdmin()">🔐 Admin Login</button>
+
+</div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div class="center hidden" id="adminLogin">
+<div class="card">
+<h2>Admin Login</h2>
+<input type="password" id="adminPass" placeholder="Enter admin password">
+<button onclick="loginAdmin()">Login</button>
+<button onclick="backUser()">⬅ Back</button>
+</div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="center hidden" id="adminPanel">
+<div class="card" style="max-width:700px">
+<h2>📊 Admin Dashboard</h2>
+
+<div class="share-buttons">
+    <a href="#" id="whatsappShare" target="_blank">WhatsApp</a>
+    <a href="#" id="telegramShare" target="_blank">Telegram</a>
+    <a href="#" id="emailShare" target="_blank">Email</a>
+</div>
+
+<button class="small-btn" onclick="downloadVCF()">⬇ Download All VCF</button>
+<button onclick="logout()">Logout</button>
+
+<div id="tableBox"></div>
+</div>
+</div>
+
+<script>
+const ADMIN_PASSWORD = "admin123"; // change it
+const GOAL = 100;
+
+const nameInput=document.getElementById("name");
+const phoneInput=document.getElementById("phone");
+const emailInput=document.getElementById("email");
+const form=document.getElementById("form");
+
+// ===== COUNTER =====
+function updateCounter(){
+    const users = JSON.parse(localStorage.getItem("vcfUsers") || "[]");
+    const count = users.length;
+
+    document.getElementById("userCount").textContent = count;
+
+    const percent = Math.min((count / GOAL) * 100, 100);
+    document.getElementById("progressBar").style.width = percent + "%";
+}
+
+// ===== SAVE USER =====
+form.addEventListener("submit", e=>{
+    e.preventDefault();
+
+    const name=nameInput.value.trim();
+    const phone=phoneInput.value.trim();
+    const email=emailInput.value.trim();
+
+    const users=JSON.parse(localStorage.getItem("vcfUsers")||"[]");
+    users.push({name,phone,email});
+    localStorage.setItem("vcfUsers",JSON.stringify(users));
+
+    updateCounter();
+
+    alert("✅ Registered successfully");
+    form.reset();
+});
+
+// ===== NAVIGATION =====
+function showAdmin(){
+    userPage.classList.add("hidden");
+    adminLogin.classList.remove("hidden");
+}
+
+function backUser(){
+    adminLogin.classList.add("hidden");
+    userPage.classList.remove("hidden");
+}
+
+function loginAdmin(){
+    const pass=document.getElementById("adminPass").value;
+    if(pass===ADMIN_PASSWORD){
+        adminLogin.classList.add("hidden");
+        adminPanel.classList.remove("hidden");
+        loadTable();
+        updateShareLinks();
+    }else{
+        alert("❌ Wrong password");
+    }
+}
+
+function logout(){
+    adminPanel.classList.add("hidden");
+    userPage.classList.remove("hidden");
+}
+
+// ===== LOAD TABLE =====
+function loadTable(){
+    const users=JSON.parse(localStorage.getItem("vcfUsers")||"[]");
+
+    let html="<table><tr><th>Name</th><th>Phone</th><th>Email</th></tr>";
+    users.forEach(u=>{
+        html+=`<tr><td>${u.name}</td><td>${u.phone}</td><td>${u.email}</td></tr>`;
+    });
+    html+="</table>";
+
+    document.getElementById("tableBox").innerHTML=html;
+}
+
+// ===== DOWNLOAD VCF =====
+function getVCFContent(){
+    const users=JSON.parse(localStorage.getItem("vcfUsers")||"[]");
+
+    if(users.length===0){
+        alert("No users yet");
+        return "";
+    }
+
+    let vcf="";
+    users.forEach(u=>{
+        vcf+=`BEGIN:VCARD
+VERSION:3.0
+FN:${u.name}
+TEL:${u.phone}
+EMAIL:${u.email}
+END:VCARD
+`;
+    });
+    return vcf;
+}
+
+function downloadVCF(){
+    const vcf = getVCFContent();
+    if(!vcf) return;
+
+    const blob=new Blob([vcf],{type:"text/vcard"});
+    const url=URL.createObjectURL(blob);
+
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="all_contacts.vcf";
+    a.click();
+}
+
+// ===== SHARE VCF =====
+function updateShareLinks(){
+    const vcf = getVCFContent();
+    if(!vcf) return;
+
+    // create a data URI
+    const blob = new Blob([vcf], { type: 'text/vcard' });
+    const url = URL.createObjectURL(blob);
+
+    // WhatsApp Web (share text link)
+    document.getElementById("whatsappShare").href = `https://api.whatsapp.com/send?text=Download my contacts VCF: ${url}`;
+
+    // Telegram
+    document.getElementById("telegramShare").href = `https://t.me/share/url?url=${url}&text=Download my contacts VCF`;
+
+    // Email
+    document.getElementById("emailShare").href = `mailto:?subject=Contacts VCF&body=Download my contacts: ${url}`;
+}
+
+// init
+updateCounter();
+</script>
+
+</body>
+  </html>
+  
